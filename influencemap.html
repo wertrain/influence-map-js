@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>JavaScript Influence Map 01</title>
+    <meta charset="utf-8">
+    <meta name="description" content="">
+    <meta name="author" content="wertrain">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type="text/css">
+      canvas {
+        background-color:white;
+        display: block;
+      }
+    </style>
+    <canvas id="canvas" width="640" height="480"></canvas>
+  </head>
+  <body>
+    <script src="scripts/map.js"></script>
+    <script src="scripts/dijkstra.js"></script>
+    <script src="scripts/chara.js"></script>
+    <script src="scripts/item.js"></script>
+    <script src="scripts/resources.js"></script>
+    <script src="scripts/influence.js"></script>
+    <script>
+      "use strict";
+      window.onload = function () {
+          var canvas = document.getElementById('canvas');
+          var context = canvas.getContext('2d');
+          
+          var mapchip = new Image();
+          var charachip = new Image();
+          var itemchip = new Image();
+          var CHIP_SIZE = 32;
+          mapchip.src = mapChipDataURL;
+          charachip.src = charaChipDataURL;
+          itemchip.src = itemChipDataURL;
+          
+          var map = new Map();
+          map.create(mapchip, CHIP_SIZE);
+          
+          var chara = new Chara();
+          chara.create(charachip, CHIP_SIZE);
+          chara.put(4, 4);
+          
+          var dijkstra = new Dijkstra();
+          
+          var getRandomPos = function() {
+              var pos = null;
+              do {
+                  var movableWidth = map.getWidth() - 2 - 1, movableHeight = map.getHeight() - 2 - 1;
+                  pos = {x: Math.floor(Math.random() * movableWidth) + 1, y: Math.floor(Math.random() * movableHeight) + 1};
+              } while(map.isHit(pos.x, pos.y));
+              return pos;
+          }
+
+          var MAX_ITEMS = 3;
+          var items = [];
+          var itemInfluenceMaps = [];
+          for (let i = 0; i < MAX_ITEMS; i++) {
+              let item = new Item();
+              item.create(itemchip, CHIP_SIZE);
+              let pos = getRandomPos();
+              item.put(pos.x, pos.y);
+              items.push(item);
+              itemInfluenceMaps.push(new InfluenceMap());
+          }
+          
+          var allItemInfluenceMap = null;
+          var resetInfluenceMap = function() {
+              allItemInfluenceMap = new InfluenceMap();
+              for (let i = 0; i < MAX_ITEMS; i++) {
+                  dijkstra.scoreFromMap(map.getArray(), items[i].getX(), items[i].getY());
+                  itemInfluenceMaps[i].setScoredMap(dijkstra.getScoredMap());
+                  allItemInfluenceMap.mix(itemInfluenceMaps[i]);
+              }
+              allItemInfluenceMap.inverse();
+              allItemInfluenceMap.normalize();
+              chara.setInfluence(allItemInfluenceMap.getArray());
+          };
+
+          resetInfluenceMap();
+          setInterval(function(){
+              if (chara.update()) {
+                  for (let i = 0; i < MAX_ITEMS; i++) {
+                      if (items[i].isHit(chara.getX(), chara.getY())) {
+                          let pos = getRandomPos();
+                          items[i].put(pos.x, pos.y);
+                          break;
+                      }
+                  }
+                  resetInfluenceMap();
+              }
+              map.draw(context);
+              allItemInfluenceMap.draw(context, CHIP_SIZE);
+              for (let i = 0; i < MAX_ITEMS; i++) {
+                  items[i].draw(context);
+              }
+              chara.draw(context);
+          }, 33);
+      }
+    </script>
+  </body>
+</html>
