@@ -62,7 +62,7 @@
             return this.map_;
         },
         getLinear_: function(min, mid, max, num, diff) {
-            let dm = (diff / 2)
+            let dm = (diff / 2);
             let l = (num <= dm) ? 
                 min + (mid - min) * (num / dm) : 
                 mid + (max - mid) * ((num - dm) / dm);
